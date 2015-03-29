@@ -1,18 +1,18 @@
 
-function clone(object)--cloneº¯Êı
-	local lookup_table = {}--ĞÂ½¨tableÓÃÓÚ¼ÇÂ¼
-	local function _copy(object)--_copy(object)º¯ÊıÓÃÓÚÊµÏÖ¸´ÖÆ
+function clone(object)--cloneå‡½æ•°
+	local lookup_table = {}--æ–°å»ºtableç”¨äºè®°å½•
+	local function _copy(object)--_copy(object)å‡½æ•°ç”¨äºå®ç°å¤åˆ¶
 		if type(object) ~= "table" then
-			return object   ---Èç¹ûÄÚÈİ²»ÊÇtable Ö±½Ó·µ»Øobject(ÀıÈçÈç¹ûÊÇÊı×Ö\×Ö·û´®Ö±½Ó·µ»Ø¸ÃÊı×Ö\¸Ã×Ö·û´®)
+			return object   ---å¦‚æœå†…å®¹ä¸æ˜¯table ç›´æ¥è¿”å›object(ä¾‹å¦‚å¦‚æœæ˜¯æ•°å­—\å­—ç¬¦ä¸²ç›´æ¥è¿”å›è¯¥æ•°å­—\è¯¥å­—ç¬¦ä¸²)
 	elseif lookup_table[object] then
-		return lookup_table[object]--ÕâÀïÊÇÓÃÓÚµİ¹éµÎÊ±ºòµÄ,Èç¹ûÕâ¸ötableÒÑ¾­¸´ÖÆ¹ıÁË,¾ÍÖ±½Ó·µ»Ø
+		return lookup_table[object]--è¿™é‡Œæ˜¯ç”¨äºé€’å½’æ»´æ—¶å€™çš„,å¦‚æœè¿™ä¸ªtableå·²ç»å¤åˆ¶è¿‡äº†,å°±ç›´æ¥è¿”å›
 	end
 	local new_table = {}
-	lookup_table[object] = new_table--ĞÂ½¨new_table¼ÇÂ¼ĞèÒª¸´ÖÆµÄ¶ş¼¶×Ó±í,²¢·Åµ½lookup_table[object]ÖĞ.
+	lookup_table[object] = new_table--æ–°å»ºnew_tableè®°å½•éœ€è¦å¤åˆ¶çš„äºŒçº§å­è¡¨,å¹¶æ”¾åˆ°lookup_table[object]ä¸­.
 	for key, value in pairs(object) do
-		new_table[_copy(key)] = _copy(value)--±éÀúobjectºÍµİ¹é_copy(value)°ÑÃ¿Ò»¸ö±íÖĞµÄÊı¾İ¶¼¸´ÖÆ³öÀ´
+		new_table[_copy(key)] = _copy(value)--éå†objectå’Œé€’å½’_copy(value)æŠŠæ¯ä¸€ä¸ªè¡¨ä¸­çš„æ•°æ®éƒ½å¤åˆ¶å‡ºæ¥
 	end
-	return setmetatable(new_table, getmetatable(object))--Ã¿Ò»´ÎÍê³É±éÀúºó,¾Í¶ÔÖ¸¶¨tableÉèÖÃmetatable¼üÖµ
+	return setmetatable(new_table, getmetatable(object))--æ¯ä¸€æ¬¡å®Œæˆéå†å,å°±å¯¹æŒ‡å®štableè®¾ç½®metatableé”®å€¼
 	end
-	return _copy(object)--·µ»Øclone³öÀ´µÄobject±íÖ¸Õë/µØÖ·
+	return _copy(object)--è¿”å›cloneå‡ºæ¥çš„objectè¡¨æŒ‡é’ˆ/åœ°å€
 end

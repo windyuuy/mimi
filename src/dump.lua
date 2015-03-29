@@ -1,7 +1,7 @@
---- @brief µ÷ÊÔÊ±´òÓ¡±äÁ¿µÄÖµ
---- @param data Òª´òÓ¡µÄ×Ö·û´®
---- @param [max_level] tableÒªÕ¹¿ª´òÓ¡µÄ¼ÆÊı£¬Ä¬ÈÏnil±íÊ¾È«²¿Õ¹¿ª
---- @param [prefix] ÓÃÓÚÔÚµİ¹éÊ±´«µİËõ½ø£¬¸Ã²ÎÊı²»¹©ÓÃ»§Ê¹ÓÃÓÚ
+--- @brief è°ƒè¯•æ—¶æ‰“å°å˜é‡çš„å€¼
+--- @param data è¦æ‰“å°çš„å­—ç¬¦ä¸²
+--- @param [max_level] tableè¦å±•å¼€æ‰“å°çš„è®¡æ•°ï¼Œé»˜è®¤nilè¡¨ç¤ºå…¨éƒ¨å±•å¼€
+--- @param [prefix] ç”¨äºåœ¨é€’å½’æ—¶ä¼ é€’ç¼©è¿›ï¼Œè¯¥å‚æ•°ä¸ä¾›ç”¨æˆ·ä½¿ç”¨äº
 --- @ref http://dearymz.blog.163.com/blog/static/205657420089251655186/
 function var_dump(data, max_level, prefix)
 	assert(var_dump~=print,'')
