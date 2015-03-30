@@ -8,4 +8,4 @@
 --	create_not_catcher=create_not_catcher,
 --}
 
-local catcher=require('catcher')
+local catcher=require('mimi_sentence_catcher')

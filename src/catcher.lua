@@ -475,6 +475,10 @@ local function catch_skip_to_case( catch_body,catch_param )
 	end
 	content.cur_pos=content_pos
 
+	if(case_catch_result==nil)then
+		return nil
+	end
+	
 	catch_result={
 		count_range={max=count,min=count},
 		length_range={max=count,min=count},
@@ -616,10 +620,14 @@ local function test_all()
 
 	local function test_catch_skip_to_case(  )
 		local test_catch_param = create_catcher_param('helloklkjw')
-		local test_catcher_chars = create_chars_catcher('w')
-		local test_catcher_skip_to_case = create_skip_to_case_catcher(test_catcher_chars,'skip to case catcher')
-		local result = test_catcher_skip_to_case:logic(test_catch_param)
-		vdump(result)
+		local case_list={'','h','e','l','o','w','j','r','rs','rl'}
+		local result
+		for k,v in ipairs(case_list) do
+			local test_catcher_chars = create_chars_catcher(v)
+			local test_catcher_skip_to_case = create_skip_to_case_catcher(test_catcher_chars,'skip to case catcher')
+			result = test_catcher_skip_to_case:logic(test_catch_param)
+			vdump(result)
+		end
 	end
 
 	--test_string()
@@ -629,7 +637,7 @@ local function test_all()
 	--	test_and()
 	--	test_not()
 	--	test_catch_word()
---	test_catch_not()
+	--test_catch_not()
 	test_catch_skip_to_case()
 
 end
@@ -643,6 +651,7 @@ local catcher_creater={
 	create_chars_catcher=create_chars_catcher,
 	create_or_catcher=create_or_catcher,
 	create_not_catcher=create_not_catcher,
+	create_skip_to_case_catcher=create_skip_to_case_catcher,
 }
 
 return catcher_creater
