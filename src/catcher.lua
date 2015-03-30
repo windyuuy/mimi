@@ -330,6 +330,10 @@ local function catch_not( catch_body,catch_param )
 	end
 	catch_param.content.cur_pos=param_stuff_pos
 
+	if(catch_or_result==nil)then
+		return nil
+	end
+	
 	catch_result={
 		count_range={max=count,min=count},
 		length_range={max=count,min=count},
@@ -478,7 +482,7 @@ local function catch_skip_to_case( catch_body,catch_param )
 	if(case_catch_result==nil)then
 		return nil
 	end
-	
+
 	catch_result={
 		count_range={max=count,min=count},
 		length_range={max=count,min=count},
@@ -612,10 +616,13 @@ local function test_all()
 
 	local function test_catch_not(  )
 		local test_catch_param = create_catcher_param('helloklkjw')
-		local test_catcher_chars = create_chars_catcher('l')
-		local test_catcher_not = create_not_catcher(test_catcher_chars,'not catcher')
-		local result = test_catcher_not:logic(test_catch_param)
-		vdump(result)
+		local case_list={'','h','e','l','o','w','j','r','rs','rl'}
+		for k,v in ipairs(case_list) do
+			local test_catcher_chars = create_chars_catcher(v)
+			local test_catcher_not = create_not_catcher(test_catcher_chars,'not catcher')
+			local result = test_catcher_not:logic(test_catch_param)
+			vdump(result)
+		end
 	end
 
 	local function test_catch_skip_to_case(  )
@@ -637,8 +644,8 @@ local function test_all()
 	--	test_and()
 	--	test_not()
 	--	test_catch_word()
-	--test_catch_not()
-	test_catch_skip_to_case()
+	test_catch_not()
+	--	test_catch_skip_to_case()
 
 end
 
