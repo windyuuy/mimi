@@ -8,4 +8,5 @@
 --	create_not_catcher=create_not_catcher,
 --}
 
+--require('strlib_ext')
 local catcher=require('mimi_sentence_catcher')

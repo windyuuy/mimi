@@ -644,7 +644,7 @@ local function test_all()
 	--	test_and()
 	--	test_not()
 	--	test_catch_word()
-	test_catch_not()
+--	test_catch_not()
 	--	test_catch_skip_to_case()
 
 end
