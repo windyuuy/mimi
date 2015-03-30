@@ -172,7 +172,7 @@ local function catch_chars( catch_body,catch_param )
 	local chars=catch_body.children
 	local content = catch_param.content
 	local count = 0
-	while(true)do
+	while(content:at(count+1):len()~=0)do
 		if(chars:find('['..content:at(count+1)..']')==nil)then
 			break
 		end
@@ -460,8 +460,10 @@ local function catch_skip_to_case( catch_body,catch_param )
 	local catch_param= clone(catch_param)
 	local catcher = catch_body.children
 	local pos,length_range,count_range=catch_body.pos,catch_body.length_range,catch_body.count_range
-	local count = pos
+	local count = pos or 0
 
+	local content = catch_param.content
+	local content_pos=catch_param.content.cur_pos
 	local case_catch_result
 	while((length_range==nil or count<length_range.max) and catch_param.content:is_end()==false)do
 		case_catch_result=catcher:logic(catch_param)
@@ -469,15 +471,16 @@ local function catch_skip_to_case( catch_body,catch_param )
 			break
 		end
 		count=count+1
-		catch_param.content.cur_pos=cur_pos+1
+		content.cur_pos=content_pos+count
 	end
+	content.cur_pos=content_pos
 
 	catch_result={
 		count_range={max=count,min=count},
 		length_range={max=count,min=count},
 		line=content:cutline(count),
 		pos=0,
-		catcher=catch_or_result.catcher_host,
+		catcher=case_catch_result.catcher_host,
 		catcher_host=catch_body,
 	}
 	return catch_result
@@ -613,7 +616,7 @@ local function test_all()
 
 	local function test_catch_skip_to_case(  )
 		local test_catch_param = create_catcher_param('helloklkjw')
-		local test_catcher_chars = create_chars_catcher('l')
+		local test_catcher_chars = create_chars_catcher('w')
 		local test_catcher_skip_to_case = create_skip_to_case_catcher(test_catcher_chars,'skip to case catcher')
 		local result = test_catcher_skip_to_case:logic(test_catch_param)
 		vdump(result)
@@ -626,7 +629,7 @@ local function test_all()
 	--	test_and()
 	--	test_not()
 	--	test_catch_word()
-	test_catch_not()
+--	test_catch_not()
 	test_catch_skip_to_case()
 
 end
