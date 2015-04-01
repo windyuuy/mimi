@@ -9,4 +9,4 @@
 --}
 
 --require('strlib_ext')
-local catcher=require('mimi_sentence_catcher')
+local catcher=require('catcher')

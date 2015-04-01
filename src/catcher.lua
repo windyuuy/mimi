@@ -8,18 +8,8 @@ _G={}
 local catch_range={min=0,max=0}
 
 local catch_logic={
+	name=nil,
 	logic=nil,
-	position_range=catch_range,
-	length_range=catch_range,
-	count_range=catch_range,
-	children={},
-}
-
-local catch_logic={
-	logic=nil,
-	position_range={max=0,min=0},
-	length_range=nil,
-	count_range=nil,
 	children={},
 }
 
@@ -29,21 +19,11 @@ local function create_catch_logic(catcher)
 	return catcher
 end
 
-local catch_preset_logic=clone(catch_logic)
-catch_preset_logic.length_range={max=1,min=1}
-catch_preset_logic.count_range={max=1,min=1}
-
-local function create_preset_catch_logic(catcher)
-	catcher=catcher or {}
-	setmetatable(catcher,{__index=catch_preset_logic})
-	return catcher
-end
-
+local create_preset_catch_logic=create_catch_logic
 
 local catch_content = {
 	stuff='',
 	cur_pos=0,
-	cursor=0,
 	cutline=function ( content,pos1,pos2 )
 		if(pos1==nil)then
 			assert(pos2,'')
@@ -67,6 +47,9 @@ local catch_content = {
 		else
 			return false
 		end
+	end,
+	getCurPos=function (self)
+		return self.cur_pos
 	end
 }
 
@@ -78,40 +61,22 @@ local catch_param={
 local catch_result={
 	line='',
 	pos=0,
-	count_range=catch_range,
-	length_range=catch_range,
+	length=0,
 	catcher=nil,
 	catcher_host=nil,
-}
-
-local match_result={
-	line='',
-	pos=0,
-	len=0,
-	catcher=nil,
-	catcher_host=nil,
-	is_matched=true,
 }
 
 local function catch_string( catch_body,catch_param )
 	local string1 = catch_body.children
 	local content = catch_param.content
-	local count = 0
-	while(true)do
-		if(string1~=content:cutline(count*string1:len(),(1+count)*string1:len()))then
-			break
-		end
-		count=count+1
-	end
-
-	if(count==0)then
+	if(string1~=content:cutline(1,string1:len()))then
 		return nil
 	end
+
 	local result={
-		line=content:cutline(count*string1:len()),
-		pos=0,
-		count_range={max=count,min=count},
-		length_range={max=count*string1:len(),min=count*string1:len()},
+		line=string1,
+		pos=content:getCurPos(),
+		length=string1:len(),
 		catcher=catch_body,
 		catcher_host=catch_body,
 	}
@@ -122,10 +87,11 @@ end
 local function create_string_catcher(str1,catcher_name)
 	local catcher={
 		logic=catch_string,
+		logic_name='catch_string',
 		children=str1,
 		name=catcher_name,
 	}
-	catcher=create_preset_catch_logic(catcher)
+	catcher=create_catch_logic(catcher)
 	return catcher
 end
 
@@ -135,62 +101,58 @@ local function catch_string_list( catch_body,catch_param )
 	local count = 0
 
 	local catch_word_result
-	local word_catcher=create_string_catcher('')
+	local string_catcher=create_string_catcher('')
 	for k,v in pairs(catch_body.children) do
 		string1=v
-		word_catcher.children=v
-		catch_word_result=word_catcher:logic(catch_param)
+		string_catcher.children=v
+		catch_word_result=string_catcher:logic(catch_param)
 		if(catch_word_result)then
-			count=catch_word_result.count_range.max
 			break
 		end
 	end
 
-	local result={
-		line=content:cutline(count*string1:len()),
-		pos=0,
-		count_range={max=count,min=count},
-		length_range={max=count*string1:len(),min=count*string1:len()},
-		catcher=catch_body,
-		catcher_host=catch_body,
-	}
-	return result
+	catch_word_result.catcher=catch_body
+	catch_word_result.catcher_host=catch_body
+	return catch_word_result
 
 end
 
-local function create_word_catcher(string_list,catcher_name)
+local function create_string_catcher(string_list,catcher_name)
 	local catcher={
-		logic=catch_string_list,
-		children=(type(string_list)=='string' and {string_list}) or string_list,
+		logic=catch_string,
+		logic_name='catch_string',
+		children=string_list,
 		name=catcher_name,
 	}
 	catcher=create_preset_catch_logic(catcher)
 	return catcher
 end
 
+local function create_string_list_catcher(string_list,catcher_name)
+	local catcher={
+		name=catcher_name,
+		children=(type(string_list)=='string' and {string_list}) or string_list,
+		logic=catch_string_list,
+		logic_name='catch_string_list',
+	}
+	create_catch_logic(catcher)
+	return catcher
+end
+
 local function catch_chars( catch_body,catch_param )
 	local chars=catch_body.children
 	local content = catch_param.content
-	local count = 0
-	while(content:at(count+1):len()~=0)do
-		if(chars:find('['..content:at(count+1)..']')==nil)then
-			break
-		end
-		count=count+1
-	end
-
-	if(count==0)then
+	if(chars:find('['..content:at(1)..']')==nil)then
 		return nil
 	end
-	local catched=content:at(count+1)
+
 	local result={
-		line=content:cutline(count),
-		pos=0,
-		count_range={max=count,min=count},
-		catcher=create_string_catcher(catched,'string(\''..catched..'\') catcher'),
+		line=content:at(1),
+		pos=content:getCurPos(),
+		length=1,
+		catcher=catch_body,
 		catcher_host=catch_body,
 	}
-	result.length_range=result.count_range
 	return result
 
 end
@@ -220,59 +182,22 @@ local function catch_or( catch_body,catch_param )
 	for k,v in pairs(logic_list) do
 		result=v.logic(v,catch_param)
 		if(result)then
-			local line,pos,count_range,length_range=result.line,result.pos,result.count_range,result.length_range
-			local mixed_count_range = catch_mixed_range(catch_body.count_range or count_range,count_range)
-			local mixed_length_range = catch_mixed_range(catch_body.length_range or length_range,length_range)
-			if(mixed_count_range~=nil and mixed_length_range~=nil)then
-				catch_result={
-					count_range=mixed_count_range,
-					length_range=mixed_length_range,
-					line=line,
-					pos=pos,
-					catcher=v,
-					catcher_host=catch_body,
-				}
-				break
-			end
+			local line,pos,length=result.line,result.pos,result.length
+			--			local mixed_count_range = catch_mixed_range(catch_body.count_range or count_range,count_range)
+			--			local mixed_length_range = catch_mixed_range(catch_body.length_range or length_range,length_range)
+			--			if(mixed_count_range~=nil and mixed_length_range~=nil)then
+			catch_result={
+				length=length,
+				line=line,
+				pos=pos,
+				catcher=v,
+				catcher_host=catch_body,
+			}
+			break
+			--			end
 		end
 	end
 
-	return catch_result
-end
-
-local function catch_and( catch_body,catch_param )
-	local content = catch_param.content
-	local logic_list = catch_body.children
-	local result = nil
-	local catch_result=nil
-	local mixed_count_range=catch_body.count_range
-	local mixed_length_range=catch_body.length_range
-	for k,v in pairs(logic_list) do
-		result=v.logic(v,catch_param)
-		if(result)then
-			local line,pos,count_range,length_range=result.line,result.pos,result.count_range,result.length_range
-			mixed_count_range = catch_mixed_range(mixed_count_range or count_range,count_range)
-			mixed_length_range = catch_mixed_range(mixed_length_range or length_range,length_range)
-			if(mixed_count_range==nil and mixed_length_range==nil)then
-				break
-			end
-		else
-			return nil
-		end
-	end
-
-	if(mixed_count_range==nil and mixed_length_range==nil)then
-		return nil
-	end
-
-	catch_result={
-		count_range=mixed_count_range,
-		length_range=mixed_length_range,
-		line=content:cutline(length_range.max),
-		pos=catch_body.position_range.min,
-		catcher=v,
-		catcher_host=catch_body,
-	}
 	return catch_result
 end
 
@@ -312,57 +237,22 @@ local function overlap_table( table1,table2 )
 end
 
 local function catch_not( catch_body,catch_param )
-	catch_param=clone(catch_param)
-	local content = catch_param.content
-	local logic_list = catch_body.children
-	local result = nil
-	local catch_result=nil
-	local count=0
-	local catch_or_result
-	local param_stuff_pos = catch_param.content.cur_pos
-	while(catch_param.content:is_end()==false)do
-		catch_or_result=catch_or(catch_body,catch_param)
-		if(catch_or_result)then
-			break
-		end
-		count=count+1
-		catch_param.content.cur_pos=param_stuff_pos+count
-	end
-	catch_param.content.cur_pos=param_stuff_pos
+	local content=catch_param.content
+	local children=catch_body.children
+	local result=children:logic(catch_param)
 
-	if(catch_or_result==nil)then
+	if(result)then
 		return nil
 	end
-	
+
 	catch_result={
-		count_range={max=count,min=count},
-		length_range={max=count,min=count},
-		line=content:cutline(count),
-		pos=0,
-		catcher=catch_or_result.catcher,
+		length=1,
+		line=content:at(1),
+		pos=content:getCurPos(),
+		catcher=catch_body,
 		catcher_host=catch_body,
 	}
 	return catch_result
-end
-
-local function catch(catch_body,catch_param)
-	local catch_result=catch_body.logic(catch_body,catch_param)
-	return catch_result
-end
-
-local function match(catch_result)
-	local match_result={
-		line=catch_result.line,
-		pos=catch_result.pos,
-		len=catch_result.length_range.max,
-		count=catch_result.count_range.max,
-		catcher=catch_result.catcher,
-		catcher_host=catch_result.catcher_host,
-
-		is_matched=true,
-	}
-
-	return match_result
 end
 
 local function extend( org,src )
@@ -384,6 +274,7 @@ end
 local function create_chars_catcher( chars1,catcher_name )
 	local catcher={
 		logic=catch_chars,
+		logic_name='catch_chars',
 		children=chars1,
 		name=catcher_name,
 	}
@@ -427,96 +318,56 @@ end
 local function create_or_catcher(catcher_list,catcher_name)
 	local catcher={
 		logic=catch_or,
+		logic_name='catch_or',
 		children=(catcher_list.logic~=nil and {catcher_list}) or clone(catcher_list),
-		length_range=nil,
-		count_range=nil,
 		name=catcher_name,
 	}
 	catcher=create_catch_logic(catcher)
 	return catcher
 end
 
-local function create_and_catcher(catcher_list,catcher_name)
-	local catcher={
-		logic=catch_and,
-		children=clone(catcher_list),
-		length_range=nil,
-		count_range=nil,
-		name=catcher_name,
-	}
-	catcher=create_catch_logic(catcher)
-	return catcher
-end
-
-local function create_not_catcher(catcher_list,catcher_name)
+local function create_not_catcher(catcher,catcher_name)
 	local catcher={
 		logic=catch_not,
-		children=(catcher_list.logic and {catcher_list}) or clone(catcher_list),
-		length_range=nil,
-		count_range=nil,
-		name=catcher_name,
-	}
-	catcher=create_catch_logic(catcher)
-	return catcher
-end
-
-local function catch_skip_to_case( catch_body,catch_param )
-	local catch_param= clone(catch_param)
-	local catcher = catch_body.children
-	local pos,length_range,count_range=catch_body.pos,catch_body.length_range,catch_body.count_range
-	local count = pos or 0
-
-	local content = catch_param.content
-	local content_pos=catch_param.content.cur_pos
-	local case_catch_result
-	while((length_range==nil or count<length_range.max) and catch_param.content:is_end()==false)do
-		case_catch_result=catcher:logic(catch_param)
-		if(case_catch_result)then
-			break
-		end
-		count=count+1
-		content.cur_pos=content_pos+count
-	end
-	content.cur_pos=content_pos
-
-	if(case_catch_result==nil)then
-		return nil
-	end
-
-	catch_result={
-		count_range={max=count,min=count},
-		length_range={max=count,min=count},
-		line=content:cutline(count),
-		pos=0,
-		catcher=case_catch_result.catcher_host,
-		catcher_host=catch_body,
-	}
-	return catch_result
-
-end
-
-local function create_skip_to_case_catcher(catcher,catcher_name)
-	local catcher={
-		logic=catch_skip_to_case,
+		logic_name='catch_not',
 		children=catcher,
-		length_range=nil,
-		count_range=nil,
 		name=catcher_name,
 	}
 	catcher=create_catch_logic(catcher)
 	return catcher
+end
+
+local catch_not_list=catch_not
+
+local function create_not_list_catcher(catcher_list,catcher_name)
+	local catcher=create_not_catcher(create_or_catcher(catcher_list,'not catcher'),catcher_name)
+	catcher.logic=catch_not_list
+	catcher.logic_name='catch_not_list'
+	return catcher
+end
+
+local function create_count_catcher(catcher,catcher_name)
 end
 
 local function test_all()
+	local function show_start_tip(tip)
+		print('start test '..tip)
+	end
+
+	local function show_end_tip(tip)
+		print('test '..tip..' end')
+	end
 
 	local function test_string( ... )
 		-- body
+
 		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
 
 		local test_catcher=create_string_catcher('hello','string catcher')
 
 		local result=test_catcher:logic(test_catch_param)
 		vdump(result)
+		assert(result.length==5 and result.pos==0 and result.catcher.logic==catch_string and result.catcher.logic_name=='catch_string','')
 
 		return result
 
@@ -524,18 +375,21 @@ local function test_all()
 
 	local function test_chars()
 		-- body
+
 		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
 
 		local test_catcher=create_chars_catcher('abhel','chars catcher')
 
 		local result=test_catcher:logic(test_catch_param)
 		vdump(result)
+		assert(result.length==1 and result.pos==0 and result.catcher.logic==catch_chars and result.catcher.logic_name=='catch_chars','')
 
 		return result
 
 	end
 
-	local function test_or(  )
+	local function test_or()
+
 		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
 
 		local test_catcher_string=create_string_catcher('hello','string catcher')
@@ -545,76 +399,97 @@ local function test_all()
 		test_catcher_or=create_or_catcher({test_catcher_string,test_catcher_chars},'catch string first')
 		result = test_catcher_or:logic(test_catch_param)
 		vdump(result)
+		assert(result.length==5 and result.pos==0 and result.catcher.logic==catch_string and result.catcher.logic_name=='catch_string','')
+
 		local result1=result
 		test_catcher_or=create_or_catcher({test_catcher_chars,test_catcher_string,},'catch chars first')
 		result = test_catcher_or:logic(test_catch_param)
 		vdump(result)
+		assert(result.length==1 and result.pos==0 and result.catcher.logic==catch_chars and result.catcher.logic_name=='catch_chars','')
+
 		return result1,result
 
 	end
 
-	local function test_and(  )
+	local function test_not()
+
 		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
 
 		local test_catcher_string=create_string_catcher('hello','string catcher')
-		local test_catcher_chars=create_chars_catcher('lhed(o','chars catcher')
-		local test_catcher_and
-		local result
-		test_catcher_and=create_and_catcher({test_catcher_string,test_catcher_chars},'catch string first')
-		result = test_catcher_and:logic(test_catch_param)
-		vdump(result)
-		local result1=result
-		test_catcher_and=create_and_catcher({test_catcher_chars,test_catcher_string,},'catch chars first')
-		result = test_catcher_and:logic(test_catch_param)
-		vdump(result)
-		return result1,result
-
-	end
-
-	local function test_not(  )
-		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
-
-		local test_catcher_string=create_string_catcher('hello','string catcher')
+		local test_catcher_string2=create_string_catcher('lhello','string catcher2')
 		local test_catcher_chars=create_chars_catcher('lhed(o','chars catcher')
 		local test_catcher_not
 		local result
-		test_catcher_not=create_not_catcher({test_catcher_string,test_catcher_chars},'catch string first')
+		test_catcher_not=create_not_catcher(create_or_catcher({test_catcher_string,test_catcher_chars}),'catch string first')
 		result = test_catcher_not:logic(test_catch_param)
 		vdump(result)
+		assert(result==nil,'')
+
 		local result1=result
-		test_catcher_not=create_not_catcher({test_catcher_chars,test_catcher_string,},'catch chars first')
+		test_catcher_not=create_not_catcher(create_or_catcher({test_catcher_chars,test_catcher_string,}),'catch chars first')
 		result = test_catcher_not:logic(test_catch_param)
 		vdump(result)
-		return result1,result
+		assert(result==nil,'')
+
+		test_catcher_not=create_not_catcher(create_or_catcher({test_catcher_string2,}),'catch chars first')
+		result = test_catcher_not:logic(test_catch_param)
+		vdump(result)
+		assert(result.length==1 and result.pos==0 and result.catcher.logic==catch_not and result.catcher.logic_name=='catch_not','')
 
 	end
 
-	local function test_match(  )
-		--vdump(match(test_string()))
-		--vdump(match(test_chars()))
-		table.foreach({test_or()},function(_,x)vdump(match(x))end)
-		local test_catcher_string=create_string_catcher('hello','word catcher')
+	local function test_not_list()
 
-	end
-
-	local function test_catch_word()
 		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
-		local test_catcher_word=create_word_catcher('hello','string catcher')
+
+		local test_catcher_string=create_string_catcher('hello','string catcher')
+		local test_catcher_string2=create_string_catcher('lhello','string catcher2')
+		local test_catcher_chars=create_chars_catcher('lhed(o','chars catcher')
+		local test_catcher_not
 		local result
-		result=test_catcher_word:logic(test_catch_param)
+		test_catcher_not=create_not_list_catcher({test_catcher_string,test_catcher_chars},'catch string first')
+		result = test_catcher_not:logic(test_catch_param)
 		vdump(result)
+		assert(result==nil,'')
 
-		test_catcher_word=create_word_catcher({'haha','hello','kljl'},'word list catcher')
-		result=test_catcher_word:logic(test_catch_param)
+		local result1=result
+		test_catcher_not=create_not_list_catcher({test_catcher_chars,test_catcher_string,},'catch chars first')
+		result = test_catcher_not:logic(test_catch_param)
 		vdump(result)
+		assert(result==nil,'')
 
-		test_catcher_word=create_word_catcher({'hell','haha','hello','kljl'},'word list catcher')
-		result=test_catcher_word:logic(test_catch_param)
+		test_catcher_not=create_not_list_catcher({test_catcher_string2,},'catch chars first')
+		result = test_catcher_not:logic(test_catch_param)
 		vdump(result)
+		assert(result.length==1 and result.pos==0 and result.catcher.logic==catch_not_list and result.catcher.logic_name=='catch_not_list','')
 
 	end
 
-	local function test_catch_not(  )
+	local function test_catch_string_list()
+
+		local test_catch_param = create_catcher_param('hello(dsfd,lkwe)')
+		local test_catcher_string_list=create_string_list_catcher('hello','string catcher')
+		local result
+		result=test_catcher_string_list:logic(test_catch_param)
+		vdump(result)
+		assert(result.length==5 and result.pos==0 and result.catcher.logic==catch_string_list and result.catcher.logic_name=='catch_string_list','')
+
+		test_catcher_string_list=create_string_list_catcher({'haha','hello','kljl'},'word list catcher')
+		result=test_catcher_string_list:logic(test_catch_param)
+		vdump(result)
+		assert(result.length==5 and result.pos==0 and result.catcher.logic==catch_string_list and result.catcher.logic_name=='catch_string_list','')
+
+		test_catcher_string_list=create_string_list_catcher({'hell','haha','hello','kljl'},'word list catcher')
+		result=test_catcher_string_list:logic(test_catch_param)
+		vdump(result)
+		assert(result.length==4 and result.pos==0 and result.catcher.logic==catch_string_list and result.catcher.logic_name=='catch_string_list','')
+
+		return result
+
+	end
+
+	local function test_catch_not()
+
 		local test_catch_param = create_catcher_param('helloklkjw')
 		local case_list={'','h','e','l','o','w','j','r','rs','rl'}
 		for k,v in ipairs(case_list) do
@@ -623,42 +498,38 @@ local function test_all()
 			local result = test_catcher_not:logic(test_catch_param)
 			vdump(result)
 		end
+
 	end
 
-	local function test_catch_skip_to_case(  )
-		local test_catch_param = create_catcher_param('helloklkjw')
-		local case_list={'','h','e','l','o','w','j','r','rs','rl'}
-		local result
-		for k,v in ipairs(case_list) do
-			local test_catcher_chars = create_chars_catcher(v)
-			local test_catcher_skip_to_case = create_skip_to_case_catcher(test_catcher_chars,'skip to case catcher')
-			result = test_catcher_skip_to_case:logic(test_catch_param)
-			vdump(result)
-		end
-	end
+	local test_list={
+		test_string=test_string,
+		test_chars=test_chars,
+		test_or=test_or,
+		test_not=test_not,
+		test_not_list=test_not_list,
+		test_catch_string_list=test_catch_string_list,
+		test_catch_not=test_catch_not,
+	}
 
-	--test_string()
-	--test_chars()
-	--test_or()
-	--test_match()
-	--	test_and()
-	--	test_not()
-	--	test_catch_word()
---	test_catch_not()
-	--	test_catch_skip_to_case()
+	show_start_tip('test_all')
+	for k,v in pairs(test_list) do
+		show_start_tip(k)
+		v()
+		show_end_tip(k)
+	end
+	show_end_tip('test_all')
 
 end
 
-test_all()
+--test_all()
 
 local catcher_creater={
 	create_catcher_param=create_catcher_param,
-	create_word_catcher=create_word_catcher,
 	create_string_catcher=create_string_catcher,
+	create_string_list_catcher=create_string_list_catcher,
 	create_chars_catcher=create_chars_catcher,
 	create_or_catcher=create_or_catcher,
 	create_not_catcher=create_not_catcher,
-	create_skip_to_case_catcher=create_skip_to_case_catcher,
 }
 
 return catcher_creater

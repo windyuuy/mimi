@@ -26,29 +26,42 @@ local function split_element(collection)
 end
 
 local func_map={
-	combination=function(info)
+	charsof=function(info)
 		local collection=info.collection
 		local signset=split_element(collection)
 		local collection=table.concat(signset,'')
 		info.signset=signset
 		info.collection=collection
-		
-		local chars_catcher=catcher.create_chars_catcher(info.collection,info.head)
+
+		local chars_catcher=catcher.create_chars_catcher(info.collection,info.newdef)
 		catchers_definitions[info.newdef]=chars_catcher
+		return chars_catcher
 	end,
+	combination=function (info)
+		local collection=info.collection
+		local signset=split_element(collection)
+		info.signset=signset
+
+		local word_catcher=catcher.create_word_catcher(info.signset,info.newdef)
+		catchers_definitions[info.newdef]=word_catcher
+		return word_catcher
+	end
 
 }
 
 function func_map.none(parameters)
-	
+
 end
 
 function func_map.some(info)
-	
+	local exist_catcher=func_map.get_catcher(info)
+	local some_catcher=catcher.create_or_catcher(exist_catcher)
+	some_catcher.length_range.max=nil
+	some_catcher.length_range.min=1
 end
 
 function func_map.any(info)
-	
+
 end
 
 local function mark(info)
