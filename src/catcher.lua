@@ -346,6 +346,48 @@ local function create_not_list_catcher(catcher_list,catcher_name)
 	return catcher
 end
 
+local function repeat_catch(catch_body,catch_params,maxcount)
+	local catch_result={}
+	local count=1
+	local cought_length=0
+	local children=catch_body.children
+	local content=catch_params
+	local catch_params_pos=content.cur_pos
+
+	while(count<maxcount)do
+		catch_result=children:logic(catch_params)
+		if(catch_result==nil)then
+			break
+		end
+		content.cur_pos=content.cur_pos+catch_result.length
+		cought_length=cought_length+catch_result.length
+		count=count+1
+	end
+
+	--	content.cur_pos=content.cur_pos-cought_length
+	content.cur_pos=catch_params_pos
+	local result={
+		length=cought_length,
+		line=content:cutline(1,cought_length),
+		pos=content:getCurPos(),
+		catcher=children,
+		catcher_host=catch_body,
+	}
+
+	return result
+end
+
+local function create_repeat_catcher(catcher,catcher_name)
+	local catcher={
+		logic=repeat_catch,
+		logic_name='repeat_catch',
+		children=catcher,
+		name=catcher_name,
+	}
+	catcher=create_catch_logic(catcher)
+	return catcher
+end
+
 local function create_count_catcher(catcher,catcher_name)
 end
 
