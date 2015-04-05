@@ -346,15 +346,15 @@ local function create_not_list_catcher(catcher_list,catcher_name)
 	return catcher
 end
 
-local function repeat_catch(catch_body,catch_params,maxcount)
+local function catch_repeat_times(catch_body,catch_params,maxcount)
 	local catch_result={}
-	local count=1
+	local count=0
 	local cought_length=0
 	local children=catch_body.children
-	local content=catch_params
+	local content=catch_params.content
 	local catch_params_pos=content.cur_pos
 
-	while(count<maxcount)do
+	while(maxcount==nil or count<maxcount)do
 		catch_result=children:logic(catch_params)
 		if(catch_result==nil)then
 			break
@@ -368,19 +368,21 @@ local function repeat_catch(catch_body,catch_params,maxcount)
 	content.cur_pos=catch_params_pos
 	local result={
 		length=cought_length,
+		count=count,
 		line=content:cutline(1,cought_length),
 		pos=content:getCurPos(),
 		catcher=children,
 		catcher_host=catch_body,
+		is_catched=(count==maxcount),
 	}
 
 	return result
 end
 
-local function create_repeat_catcher(catcher,catcher_name)
+local function create_repeat_times_catcher(catcher,catcher_name)
 	local catcher={
-		logic=repeat_catch,
-		logic_name='repeat_catch',
+		logic=catch_repeat_times,
+		logic_name='repeat_times_catch',
 		children=catcher,
 		name=catcher_name,
 	}
@@ -388,12 +390,31 @@ local function create_repeat_catcher(catcher,catcher_name)
 	return catcher
 end
 
-local function create_count_catcher(catcher,catcher_name)
+local function catch_count_range(catcher,catch_params,count_range)
+	local just_over_range=(count_range.max and count_range.max+1) or nil
+	local result=catch_repeat_times(catcher,catch_params,just_over_range)
+	if(result.is_catched==true or (count_range.min~=nil and result.count<count_range.min))then
+		return nil
+	end
+	local catch_result=clone(result)
+	catch_result.is_catched=true
+	return catch_result
+end
+
+local function create_count_range_catcher(catcher,catcher_name)
+	local catcher={
+		logic=catch_count_range,
+		logic_name='count_catch',
+		children=catcher,
+		name=catcher_name,
+	}
+	catcher=create_catch_logic(catcher)
+	return catcher
 end
 
 local function test_all()
 	local function show_start_tip(tip)
-		print('start test '..tip)
+		print('test '..tip..' start')
 	end
 
 	local function show_end_tip(tip)
@@ -543,6 +564,38 @@ local function test_all()
 
 	end
 
+	local function test_catch_repeat_times()
+		local test_catch_param = create_catcher_param('helloklkjw')
+		local case_list={'','h','e','l','o','w','j','r','rs','rl','helo'}
+		local times_cases={0,1,2,3,4,5,6,nil,}
+		for k,v in ipairs(case_list) do
+			for _,i in pairs(times_cases) do
+				print('test repeat time ',i)
+				local test_catcher_chars = create_chars_catcher(v)
+				local test_catcher_repeat = create_repeat_times_catcher(test_catcher_chars,'repeat times catcher')
+				local result = test_catcher_repeat:logic(test_catch_param,i)
+				vdump(result)
+			end
+		end
+	end
+
+	local function test_catch_count_range()
+		local test_catch_param = create_catcher_param('helloklkjw')
+		local case_list={'','h','e','l','o','w','j','r','rs','rl','helo'}
+		local times_cases={0,1,2,3,4,5,6,nil,}
+		for k,v in ipairs(case_list) do
+			for _,max in pairs(times_cases) do
+				for min=0,max do
+					print('test catch range ','min=',min,'max=',max)
+					local test_catcher_chars = create_chars_catcher(v)
+					local test_catcher_count_range = create_count_range_catcher(test_catcher_chars,'count range catcher')
+					local result = test_catcher_count_range:logic(test_catch_param,{min=min,max=max})
+					vdump(result)
+				end
+			end
+		end
+	end
+
 	local test_list={
 		test_string=test_string,
 		test_chars=test_chars,
@@ -551,6 +604,8 @@ local function test_all()
 		test_not_list=test_not_list,
 		test_catch_string_list=test_catch_string_list,
 		test_catch_not=test_catch_not,
+		test_catch_repeat_times=test_catch_repeat_times,
+		test_catch_count_range=test_catch_count_range,
 	}
 
 	show_start_tip('test_all')
@@ -572,6 +627,7 @@ local catcher_creater={
 	create_chars_catcher=create_chars_catcher,
 	create_or_catcher=create_or_catcher,
 	create_not_catcher=create_not_catcher,
+	create_count_range_catcher=create_count_range_catcher,
 }
 
 return catcher_creater
