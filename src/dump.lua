@@ -24,7 +24,11 @@ function var_dump(data, max_level, prefix)
 				end
 
 				if type(v) ~= "table" or (type(max_level) == "number" and max_level <= 1) then
-					print(v)
+					if(type(v)=='string')then
+						print('\''..v..'\'')
+					else
+						print(v)
+					end
 				else
 					if max_level == nil then
 						var_dump(v, nil, prefix_next)
